@@ -1,0 +1,3 @@
+# Only the unzipped build is needed for the image
+*
+!dist/

@@ -1,0 +1,51 @@
+# FixChap production nginx (HTTPS). ${SERVER_NAMES} and ${PRIMARY_DOMAIN} come from .env.
+# Copied to ./nginx by deployme.sh. Certificates: ./sslrenew.sh
+
+# Plain HTTP: Let's Encrypt checks, everything else -> HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAMES};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${SERVER_NAMES};
+
+    ssl_certificate     /etc/letsencrypt/live/${PRIMARY_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${PRIMARY_DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # request photos from the apps arrive as base64 (up to 5 photos x 5 MB)
+    client_max_body_size 40m;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml text/plain application/xml;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        proxy_pass http://app:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # Overwrite (not append) so the app sees the real visitor IP for login rate limits
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}

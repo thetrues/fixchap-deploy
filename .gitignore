@@ -1,0 +1,15 @@
+# Secrets and server data never go to git
+.env
+secrets/*
+!secrets/README.md
+backups/*
+!backups/.gitkeep
+data/
+certbot/conf/
+certbot/www/
+database/.run.load
+# Created on the server by deployme.sh
+dist/
+nginx/
+__MACOSX/
+.DS_Store
