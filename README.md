@@ -48,6 +48,7 @@ git pull
 ### 1. Docker
 
 ```bash
+sudo apt update && sudo apt install -y git unzip curl
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER      # log out and back in
 docker compose version

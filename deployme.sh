@@ -23,7 +23,15 @@ fixchap_load_env .env
 rm -rf __MACOSX
 rm -rf dist
 
-unzip -q dist.zip
+# unzip if installed, otherwise Python's built-in zip support (apt install -y unzip to add it)
+if command -v unzip >/dev/null 2>&1; then
+  unzip -q dist.zip
+elif command -v python3 >/dev/null 2>&1; then
+  python3 -m zipfile -e dist.zip .
+else
+  echo "✗ Can't unzip dist.zip: install unzip with  apt install -y unzip"; exit 1
+fi
+[ -f dist/server.js ] || { echo "✗ dist.zip did not contain dist/server.js — rebuild with packing.sh"; exit 1; }
 rm -rf __MACOSX
 echo "Unzipped build: $(cat dist/VERSION.json 2>/dev/null | tr -d '\n ' )"
 
@@ -52,7 +60,11 @@ $DC up -d --build
 echo "Waiting for the app to be healthy..."
 ok=0
 for i in $(seq 1 60); do
-  if curl -fsS "http://127.0.0.1:${APP_PORT:-3000}/api/health" >/dev/null 2>&1; then ok=1; break; fi
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsS "http://127.0.0.1:${APP_PORT:-3000}/api/health" >/dev/null 2>&1 && { ok=1; break; }
+  else
+    $DC exec -T app wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 && { ok=1; break; }
+  fi
   sleep 2
 done
 if [ "$ok" = 1 ]; then
