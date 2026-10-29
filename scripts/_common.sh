@@ -7,9 +7,9 @@ if docker compose version >/dev/null 2>&1; then DC=(docker compose)
 elif command -v docker-compose >/dev/null 2>&1; then DC=(docker-compose)
 else echo "Docker Compose is not installed. See README.md, step 1." >&2; exit 1; fi
 
+. "$ROOT/scripts/_env.sh"
 load_env() {
-  [ -f .env ] || { echo "Missing .env — run: cp .env.example .env  and fill it in." >&2; exit 1; }
-  set -a; . ./.env; set +a
+  fixchap_load_env .env || { echo "Fix .env first (run scripts/check-env.sh)" >&2; exit 1; }
 }
 
 # psql inside the database container

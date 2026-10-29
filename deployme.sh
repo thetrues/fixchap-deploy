@@ -14,13 +14,11 @@ if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="do
 
 # git pull
 
-[ -f .env ] || { echo "Missing .env — cp .env.example .env and fill it in"; exit 1; }
 [ -f dist.zip ] || { echo "Missing dist.zip — run packing.sh on the development machine and git pull"; exit 1; }
-set -a; . ./.env; set +a
-for v in APP_URL POSTGRES_PASSWORD AUTH_SECRET SERVER_NAMES PRIMARY_DOMAIN; do
-  if [ -z "${!v}" ] || [ "${!v}" = "change-me" ]; then echo "✗ $v is not set in .env"; exit 1; fi
-done
-[ -f secrets/credentials-file.json ] || echo "! secrets/credentials-file.json missing — push notifications will not be sent"
+# check .env and stop with a clear message if anything is wrong
+./scripts/check-env.sh || exit 1
+. ./scripts/_env.sh
+fixchap_load_env .env
 
 rm -rf __MACOSX
 rm -rf dist

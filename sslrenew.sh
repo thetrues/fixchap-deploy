@@ -11,7 +11,8 @@ DEPLOY_DIR="${DEPLOY_DIR:-/opt/deployments/fixchap-deploy}"
 cd "$DEPLOY_DIR"
 if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
 
-set -a; . ./.env; set +a
+. ./scripts/_env.sh
+fixchap_load_env .env || { echo "Fix .env first (run ./scripts/check-env.sh)"; exit 1; }
 [ -n "$PRIMARY_DOMAIN" ] && [ -n "$SERVER_NAMES" ] || { echo "Set SERVER_NAMES and PRIMARY_DOMAIN in .env"; exit 1; }
 [ -n "$LETSENCRYPT_EMAIL" ] || { echo "Set LETSENCRYPT_EMAIL in .env (expiry warnings go there)"; exit 1; }
 mkdir -p certbot/www certbot/conf
