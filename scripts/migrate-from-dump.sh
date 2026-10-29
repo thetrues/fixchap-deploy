@@ -5,8 +5,21 @@
 # then compares row counts table by table. The FixChap tables in Postgres are REPLACED.
 . "$(dirname "$0")/_common.sh"
 load_env
-DUMP="${1:?Usage: scripts/migrate-from-dump.sh /path/to/fixchap.sql}"
+DUMP="${1:-}"
+if [ -z "$DUMP" ]; then
+  echo "Which MySQL dump should be imported? Give its path, for example:"
+  echo "    ./scripts/migrate-from-dump.sh backups/fixchap.sql"
+  echo
+  echo "Copy the dump to the server first (from your computer):"
+  echo "    scp fixchap.sql root@<server-ip>:$ROOT/backups/"
+  found=$(find "$ROOT" "$ROOT/backups" /root /tmp /home -maxdepth 2 -name '*.sql' 2>/dev/null | sort -u | head -10)
+  if [ -n "$found" ]; then echo; echo ".sql files found on this server:"; echo "$found" | sed 's/^/    /'; fi
+  exit 1
+fi
+# a relative path is relative to the folder the script was started from
+if [[ "$DUMP" != /* ]] && [ ! -f "$DUMP" ] && [ -n "${OLDPWD:-}" ] && [ -f "$OLDPWD/$DUMP" ]; then DUMP="$OLDPWD/$DUMP"; fi
 [ -f "$DUMP" ] || { echo "File not found: $DUMP" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "python3 is needed — apt install -y python3" >&2; exit 1; }
 MPW="${MIGRATE_MYSQL_PASSWORD:-fixchap-temp-only}"
 urlenc() { python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1],safe=""))' "$1"; }
 
