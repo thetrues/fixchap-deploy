@@ -52,6 +52,18 @@ for d in "${STORAGE_HOST_DIR:-./data/storage}" "${HANDYMAN_IMG_HOST_DIR:-./data/
 done
 mkdir -p certbot/www certbot/conf backups
 
+# Database changes (new tables etc.). Each file in database/migrations is safe to run again.
+if ls database/migrations/*.sql >/dev/null 2>&1; then
+  echo "Database updates";
+  $DC up -d db
+  until $DC exec -T db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do sleep 1; done
+  for f in database/migrations/*.sql; do
+    echo "  $f"
+    $DC exec -T -e PGOPTIONS=--client-min-messages=warning db psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "/$f" \
+      || { echo "✗ $f failed — deployment stopped, nothing else changed."; exit 1; }
+  done
+fi
+
 echo "Docker build";
 
 

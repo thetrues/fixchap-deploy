@@ -62,6 +62,12 @@ export PGPASSWORD="$POSTGRES_PASSWORD"
 unset PGPASSWORD
 rm -f database/.run.load
 
+say "Applying database updates (new tables and columns)"
+for f in database/migrations/*.sql; do
+  [ -e "$f" ] || continue
+  "${DC[@]}" exec -T -e PGOPTIONS=--client-min-messages=warning db psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "/$f"
+done
+
 say "Comparing row counts"
 skip=" failed_jobs jobs job_batches sessions migrations cache cache_locks password_reset_tokens personal_access_tokens "
 bad=0
