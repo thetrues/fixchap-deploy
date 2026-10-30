@@ -19,12 +19,10 @@ fi
 # a relative path is relative to the folder the script was started from
 if [[ "$DUMP" != /* ]] && [ ! -f "$DUMP" ] && [ -n "${OLDPWD:-}" ] && [ -f "$OLDPWD/$DUMP" ]; then DUMP="$OLDPWD/$DUMP"; fi
 [ -f "$DUMP" ] || { echo "File not found: $DUMP" >&2; exit 1; }
-command -v python3 >/dev/null 2>&1 || { echo "python3 is needed — apt install -y python3" >&2; exit 1; }
 MPW="${MIGRATE_MYSQL_PASSWORD:-fixchap-temp-only}"
-urlenc() { python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1],safe=""))' "$1"; }
 
 echo "This replaces the FixChap tables in the '$POSTGRES_DB' database with the data from $DUMP."
-read -r -p "Type YES to continue: " ok; [ "$ok" = "YES" ] || exit 1
+read -r -p "Type YES to continue: " ok; case "$ok" in [Yy][Ee][Ss]) ;; *) echo "Cancelled — nothing was changed."; exit 1;; esac
 
 say "Backing up the current Postgres database first"
 "${DC[@]}" up -d db
@@ -33,6 +31,13 @@ until "${DC[@]}" exec -T db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/d
 
 say "Stopping the app during the copy"
 "${DC[@]}" stop app 2>/dev/null || true
+# If anything below fails: remove the temporary MariaDB and start the app again
+cleanup() {
+  rm -f "$ROOT/database/.run.load"
+  "${DC[@]}" --profile migrate rm -sf mysql-temp >/dev/null 2>&1 || true
+  "${DC[@]}" up -d app >/dev/null 2>&1 || true
+}
+trap 'echo; echo "✗ Migration stopped — the app was started again with the old data." >&2; cleanup' ERR
 
 say "Loading the dump into a temporary MariaDB"
 "${DC[@]}" --profile migrate up -d mysql-temp
@@ -45,11 +50,16 @@ done
 "${DC[@]}" --profile migrate exec -T mysql-temp mariadb -uroot -p"$MPW" fixchap < "$DUMP"
 
 say "Copying into PostgreSQL with pgloader"
-sed -e "s#^  FROM mysql://.*#  FROM mysql://root:$(urlenc "$MPW")@mysql-temp:3306/fixchap#" \
-    -e "s#^  INTO postgresql://.*#  INTO postgresql://$(urlenc "$POSTGRES_USER"):$(urlenc "$POSTGRES_PASSWORD")@db:5432/$(urlenc "$POSTGRES_DB")#" \
+# pgloader does not decode %xx in its URLs, so the Postgres password is passed in PGPASSWORD
+# (read by pgloader when the URL has none). In the MySQL URL a literal @ is written as @@.
+MPW_URL="${MPW//@/@@}"
+sed -e "s#^  FROM mysql://.*#  FROM mysql://root:${MPW_URL//#/\\#}@mysql-temp:3306/fixchap#" \
+    -e "s#^  INTO postgresql://.*#  INTO postgresql://$POSTGRES_USER@db:5432/$POSTGRES_DB#" \
     database/mysql-to-postgres.load.example > database/.run.load
 chmod 600 database/.run.load
-"${DC[@]}" --profile migrate run --rm pgloader pgloader --no-ssl-cert-verification /database/.run.load | tail -45
+export PGPASSWORD="$POSTGRES_PASSWORD"
+"${DC[@]}" --profile migrate run --rm -e PGPASSWORD pgloader pgloader --no-ssl-cert-verification /database/.run.load | tail -45
+unset PGPASSWORD
 rm -f database/.run.load
 
 say "Comparing row counts"
@@ -62,6 +72,7 @@ while read -r t; do
   if [ "$m" = "$p" ]; then printf "  ✓ %-30s %s\n" "$t" "$m"; else printf "  ✗ %-30s mysql=%s postgres=%s\n" "$t" "$m" "$p"; bad=1; fi
 done < <("${DC[@]}" --profile migrate exec -T mysql-temp mariadb -uroot -p"$MPW" -N fixchap -e "SHOW TABLES")
 
+trap - ERR
 say "Removing the temporary MariaDB"
 "${DC[@]}" --profile migrate rm -sf mysql-temp >/dev/null
 
