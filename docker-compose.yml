@@ -59,6 +59,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: ${APP_TIMEZONE:-UTC}
+    # Only reachable from the server itself — use pgAdmin's SSH tunnel to connect.
+    ports:
+      - "127.0.0.1:${PGADMIN_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backups:/backups
