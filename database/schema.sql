@@ -186,6 +186,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS walkin_ticket_no_uniq ON walkin_ticket (ticket
 CREATE INDEX IF NOT EXISTS walkin_ticket_location_idx ON walkin_ticket (location_id);
 CREATE INDEX IF NOT EXISTS walkin_ticket_phone_idx ON walkin_ticket (client_phone);
 CREATE INDEX IF NOT EXISTS walkin_ticket_status_idx ON walkin_ticket (status);
+-- Workflow (004): who received the device, the inspector (dashboard user) and the handyman
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS received_by INT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS received_at TIMESTAMP NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS inspector_id INT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS inspector_assigned_at TIMESTAMP NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS handyman_id INT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS handyman_assigned_at TIMESTAMP NULL;
+CREATE INDEX IF NOT EXISTS walkin_ticket_inspector_idx ON walkin_ticket (inspector_id);
+CREATE INDEX IF NOT EXISTS walkin_ticket_handyman_idx ON walkin_ticket (handyman_id);
+-- 005: the handyman the client asked for on the check-in form
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS preferred_handyman_id INT NULL;
+-- 006: the client's language for SMS and email ('en' or 'sw')
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS lang VARCHAR(2) NOT NULL DEFAULT 'en';
+-- 007: handymen who work at each location and per clinic session
+CREATE TABLE IF NOT EXISTS location_handyman (
+  id SERIAL PRIMARY KEY, location_id INT NOT NULL, handyman_id INT NOT NULL, created_at TIMESTAMP NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS location_handyman_uniq ON location_handyman (location_id, handyman_id);
+CREATE TABLE IF NOT EXISTS clinic_session_handyman (
+  id SERIAL PRIMARY KEY, session_id INT NOT NULL, handyman_id INT NOT NULL, created_at TIMESTAMP NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS clinic_session_handyman_uniq ON clinic_session_handyman (session_id, handyman_id);
 
 -- History: every status change or message sent to the client
 CREATE TABLE IF NOT EXISTS walkin_ticket_event (
