@@ -19,6 +19,18 @@ fi
 # a relative path is relative to the folder the script was started from
 if [[ "$DUMP" != /* ]] && [ ! -f "$DUMP" ] && [ -n "${OLDPWD:-}" ] && [ -f "$OLDPWD/$DUMP" ]; then DUMP="$OLDPWD/$DUMP"; fi
 [ -f "$DUMP" ] || { echo "File not found: $DUMP" >&2; exit 1; }
+# Only a MySQL/MariaDB export of the old Laravel database belongs here (not the files in database/migrations,
+# which deployme.sh applies to PostgreSQL by itself)
+case "$DUMP" in
+  *database/migrations/*)
+    echo "✗ $DUMP is a PostgreSQL update, not a MySQL dump." >&2
+    echo "  Updates in database/migrations are applied automatically by ./deployme.sh — run that instead." >&2
+    exit 1;;
+esac
+if ! head -c 200000 "$DUMP" | grep -qiE '^-- (MySQL|MariaDB) dump|^-- phpMyAdmin SQL Dump|CREATE TABLE `'; then
+  echo "✗ $DUMP does not look like a MySQL dump (expected a mysqldump or phpMyAdmin export of the old Laravel database)." >&2
+  exit 1
+fi
 MPW="${MIGRATE_MYSQL_PASSWORD:-fixchap-temp-only}"
 
 echo "This replaces the FixChap tables in the '$POSTGRES_DB' database with the data from $DUMP."
