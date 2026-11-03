@@ -206,6 +206,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS location_handyman_uniq ON location_handyman (l
 CREATE TABLE IF NOT EXISTS clinic_session_handyman (
   id SERIAL PRIMARY KEY, session_id INT NOT NULL, handyman_id INT NOT NULL, created_at TIMESTAMP NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS clinic_session_handyman_uniq ON clinic_session_handyman (session_id, handyman_id);
+-- 008: job type (1 new, 2 warranty) and the warranty company
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS job_type SMALLINT NOT NULL DEFAULT 1;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS company_id INT NULL;
+-- 009: client rating (1-5 stars) through a private link sent when the device is collected
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS rate_token VARCHAR(40) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS rating SMALLINT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS rating_comment TEXT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS rated_at TIMESTAMP NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS walkin_ticket_rate_token_uniq ON walkin_ticket (rate_token);
+-- 010: how the job was paid (home requests and walk-in tickets)
+ALTER TABLE request ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NULL;
+ALTER TABLE request ADD COLUMN IF NOT EXISTS payment_ref VARCHAR(100) NULL;
+ALTER TABLE request ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(12,2) NULL;
+ALTER TABLE request ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP NULL;
+ALTER TABLE request ADD COLUMN IF NOT EXISTS paid_by INT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS payment_ref VARCHAR(100) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS amount_paid NUMERIC(12,2) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS paid_by INT NULL;
 
 -- History: every status change or message sent to the client
 CREATE TABLE IF NOT EXISTS walkin_ticket_event (
