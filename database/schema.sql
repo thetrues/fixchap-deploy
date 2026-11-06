@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS walkin_ticket (
   agreement_text TEXT NOT NULL, agreed_at TIMESTAMP NOT NULL,
   promotion_id INT NULL, promo_title VARCHAR(150) NULL, discount_type VARCHAR(10) NULL, discount_value NUMERIC(12,2) NULL,
   quoted_amount NUMERIC(12,2) NULL, final_amount NUMERIC(12,2) NULL,
-  status VARCHAR(12) NOT NULL DEFAULT 'RECEIVED', source VARCHAR(10) NOT NULL DEFAULT 'STAFF', created_by INT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'RECEIVED', source VARCHAR(10) NOT NULL DEFAULT 'STAFF', created_by INT NULL,
   created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, deleted_at TIMESTAMP NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS walkin_ticket_no_uniq ON walkin_ticket (ticket_no);
 CREATE INDEX IF NOT EXISTS walkin_ticket_location_idx ON walkin_ticket (location_id);
@@ -281,9 +281,25 @@ CREATE TABLE IF NOT EXISTS location_company (
   id SERIAL PRIMARY KEY, location_id INT NOT NULL, company_id INT NOT NULL, created_at TIMESTAMP NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS location_company_uniq ON location_company (location_id, company_id);
 
+-- 015: walk-in guided flow
+-- (status columns are VARCHAR(20) in the CREATE TABLE statements)
+-- Initial inspection (when the device is received)
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS model_no VARCHAR(100) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS serial_no VARCHAR(100) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS rated_power VARCHAR(50) NULL;
+-- Collection: the owner, or someone else (name and phone)
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS collected_by_owner SMALLINT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS collector_name VARCHAR(150) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS collector_phone VARCHAR(20) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS collected_at TIMESTAMP NULL;
+-- Services each service center / clinic takes (none = all services)
+CREATE TABLE IF NOT EXISTS location_service (
+  id SERIAL PRIMARY KEY, location_id INT NOT NULL, service_id INT NOT NULL, created_at TIMESTAMP NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS location_service_uniq ON location_service (location_id, service_id);
+
 -- History: every status change or message sent to the client
 CREATE TABLE IF NOT EXISTS walkin_ticket_event (
-  id SERIAL PRIMARY KEY, ticket_id INT NOT NULL, status VARCHAR(12) NOT NULL, note TEXT NULL, message TEXT NULL,
+  id SERIAL PRIMARY KEY, ticket_id INT NOT NULL, status VARCHAR(20) NOT NULL, note TEXT NULL, message TEXT NULL,
   sms_sent SMALLINT DEFAULT 0, email_sent SMALLINT DEFAULT 0, created_by INT NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL);
 CREATE INDEX IF NOT EXISTS walkin_ticket_event_ticket_idx ON walkin_ticket_event (ticket_id);
 
