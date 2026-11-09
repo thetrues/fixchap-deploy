@@ -297,6 +297,28 @@ CREATE TABLE IF NOT EXISTS location_service (
   id SERIAL PRIMARY KEY, location_id INT NOT NULL, service_id INT NOT NULL, created_at TIMESTAMP NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS location_service_uniq ON location_service (location_id, service_id);
 
+-- 016: managers may assign the handyman on any walk-in ticket
+CREATE TABLE IF NOT EXISTS app_once (name VARCHAR(100) PRIMARY KEY, done_at TIMESTAMP NULL);
+UPDATE staff_role SET permissions = CASE WHEN COALESCE(permissions, '') = '' THEN 'walkin.assign_handyman' ELSE permissions || ',walkin.assign_handyman' END,
+  updated_at = NOW()
+WHERE name = 'Manager'
+  AND position('walkin.assign_handyman' IN COALESCE(permissions, '')) = 0
+  AND NOT EXISTS (SELECT 1 FROM app_once WHERE name = '016_manager_assign_handyman');
+INSERT INTO app_once (name, done_at) VALUES ('016_manager_assign_handyman', NOW()) ON CONFLICT (name) DO NOTHING;
+
+-- 017: quality assurance; managers may change the inspector
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS qa_by INT NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS qa_at TIMESTAMP NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS qa_notes TEXT NULL;
+-- Managers may change the inspector (when the receiver is away). Applied once, like 016.
+CREATE TABLE IF NOT EXISTS app_once (name VARCHAR(100) PRIMARY KEY, done_at TIMESTAMP NULL);
+UPDATE staff_role SET permissions = CASE WHEN COALESCE(permissions, '') = '' THEN 'walkin.assign_receiver' ELSE permissions || ',walkin.assign_receiver' END,
+  updated_at = NOW()
+WHERE name = 'Manager'
+  AND position('walkin.assign_receiver' IN COALESCE(permissions, '')) = 0
+  AND NOT EXISTS (SELECT 1 FROM app_once WHERE name = '017_manager_change_inspector');
+INSERT INTO app_once (name, done_at) VALUES ('017_manager_change_inspector', NOW()) ON CONFLICT (name) DO NOTHING;
+
 -- History: every status change or message sent to the client
 CREATE TABLE IF NOT EXISTS walkin_ticket_event (
   id SERIAL PRIMARY KEY, ticket_id INT NOT NULL, status VARCHAR(20) NOT NULL, note TEXT NULL, message TEXT NULL,
