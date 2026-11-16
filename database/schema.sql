@@ -318,6 +318,10 @@ WHERE name = 'Manager'
   AND position('walkin.assign_receiver' IN COALESCE(permissions, '')) = 0
   AND NOT EXISTS (SELECT 1 FROM app_once WHERE name = '017_manager_change_inspector');
 INSERT INTO app_once (name, done_at) VALUES ('017_manager_change_inspector', NOW()) ON CONFLICT (name) DO NOTHING;
+-- 018: the client's answer to the quotation (approve / decline) from the app
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS quote_response VARCHAR(10) NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS quote_response_at TIMESTAMP NULL;
+ALTER TABLE walkin_ticket ADD COLUMN IF NOT EXISTS quote_response_note VARCHAR(500) NULL;
 
 -- History: every status change or message sent to the client
 CREATE TABLE IF NOT EXISTS walkin_ticket_event (
