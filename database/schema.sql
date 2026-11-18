@@ -249,11 +249,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INT NULL;
 
 INSERT INTO staff_role (name, description, permissions, created_at, updated_at) VALUES
  ('Manager', 'Everything except users, settings, deleting and restoring',
-  'dashboard.view,reports.view,activity.view,requests.view,requests.manage,requests.payment,walkin.view,walkin.create,walkin.work,walkin.payment,clinics.run,clients.view,clients.manage,handymen.view,handymen.manage,catalogue.manage,locations.manage', NOW(), NOW()),
+  'dashboard.view,reports.view,activity.view,requests.view,requests.manage,requests.payment,walkin.view,walkin.create,walkin.receive,walkin.work,walkin.quote,walkin.payment,clinics.run,clients.view,clients.manage,handymen.view,handymen.manage,catalogue.manage,locations.manage', NOW(), NOW()),
  ('Receptionist', 'Front desk: requests, walk-in check-in, receiving devices and payments',
-  'requests.view,requests.manage,requests.payment,walkin.view,walkin.create,walkin.payment,clinics.run,clients.view,clients.manage,handymen.view', NOW(), NOW()),
+  'requests.view,requests.manage,requests.payment,walkin.view,walkin.create,walkin.receive,walkin.payment,clinics.run,clients.view,clients.manage,handymen.view', NOW(), NOW()),
  ('Inspector', 'Technician: inspects walk-in devices, assigns the handyman, quotes and updates status',
-  'walkin.view,walkin.work,clients.view,handymen.view', NOW(), NOW()),
+  'walkin.view,walkin.work,walkin.quote,clients.view,handymen.view', NOW(), NOW()),
  ('Accountant', 'Payments and reports; can view jobs but not change them',
   'dashboard.view,reports.view,requests.view,requests.payment,walkin.view,walkin.payment,clients.view', NOW(), NOW())
 ON CONFLICT DO NOTHING;
